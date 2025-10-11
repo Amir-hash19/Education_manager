@@ -10,6 +10,8 @@ from datetime import datetime
 
 
 class BootCampCategoryModel(Base):
+    __tablename__ = "categories"
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(150), unique=True)
     date_created = Column(DateTime(timezone=True), server_default=func.now())
@@ -30,7 +32,7 @@ bootcamp_instructors = Table(
 
 
 
-class StatusEnum(PyEnum):
+class BootCampStatus(PyEnum):
     draft = "draft"
     available = "available"
     finished = "finished"
@@ -38,8 +40,10 @@ class StatusEnum(PyEnum):
 
 
 class BootCampModel(Base):
+    __tablename__ = "bootcamps"
+
     id = Column(Integer, primary_key=True, index=True)
-    status = Column(Enum(StatusEnum), nullable=False, default=StatusEnum.draft)
+    status = Column(Enum(BootCampStatus), nullable=False, default=BootCampStatus.draft)
 
 
     instructors = relationship(
