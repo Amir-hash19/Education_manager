@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Table, DateTime, Enum
 from passlib.context import CryptContext
 from sqlalchemy.orm import relationship
-from db.database import Base
+from app.db.database import Base
 from enum import Enum as PyEnum
 from datetime import datetime
 
@@ -35,7 +35,7 @@ class RoleModel(Base):
 class GenderEnum(PyEnum):
     male = "male"
     female = "female"
-    other = "other"
+
 
 
 
