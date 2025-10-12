@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from app.db.database import Base
 from enum import Enum as PyEnum
 from datetime import datetime
-
+from app.bootcamp.models import BootCampModel, bootcamp_instructors
 
 pwd_context = CryptContext(schemes=["argon2"],deprecated="auto")
 
@@ -52,6 +52,13 @@ class UserModel(Base):
     updated_date = Column(DateTime(),default=datetime.now,onupdate=datetime.now) 
 
     roles = relationship("RoleModel", secondary=user_roles, back_populates="users")
+
+    bootcamp = relationship(
+        "BootCampModel",
+        secondary="bootcamp_instructors",
+        back_populates="instructors"
+    )
+    
 
 
     def hash_password(self, plain_password: str) -> str:

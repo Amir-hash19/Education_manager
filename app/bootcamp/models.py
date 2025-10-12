@@ -49,7 +49,7 @@ class BootCampModel(Base):
     instructors = relationship(
         "UserModel",
         secondary=bootcamp_instructors,
-        back_populates="bootcamps"
+        back_populates="bootcamp"
     )
 
 
@@ -62,6 +62,10 @@ class BootCampModel(Base):
     end_date = Column(Date, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_date = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+
+    category = relationship("BootCampCategoryModel", back_populates="bootcamp_list")
 
     def __repr__(self):
         return f"bootcamp  ID {self.id} and created_at{self.created_at}"

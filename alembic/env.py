@@ -6,6 +6,8 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
+import asyncio
+from app.db.seed_roles import seed_roles
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -63,6 +65,9 @@ async def run_migrations_online() -> None:
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+
+
+    await seed_roles()    
 
 
 if context.is_offline_mode():
