@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Boolean,Text, String, Numeric,ForeignKey, Table, DateTime, Enum, Date
 from passlib.context import CryptContext
 from sqlalchemy.orm import relationship
-from db.database import Base
+from app.db.database import Base
 from sqlalchemy.sql import func
 from enum import Enum as PyEnum
 from datetime import datetime

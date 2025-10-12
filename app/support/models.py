@@ -4,7 +4,7 @@ from sqlalchemy import(
         Table, DateTime, Enum)
 
 from sqlalchemy.orm import relationship
-from db.database import Base
+from app.db.database import Base
 from enum import Enum as PyEnum
 from datetime import datetime
 
@@ -34,7 +34,7 @@ class MessageStatusEnum(PyEnum):
     closed = "closed"
 
 
-class TicketMessage(Base):
+class TicketMessageModel(Base):
     __tablename__ = "ticket_messages"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -50,7 +50,7 @@ class TicketMessage(Base):
     slug = Column(String(255), unique=True, nullable=False)
     title = Column(String(50), nullable=True)
 
-    admin_id = Column(Integer, ForeignKey("users.id", ondelete="PROTECT"), nullable=True)
+    admin_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     admin_response = Column(Text, nullable=True)
 
     def __repr__(self):
