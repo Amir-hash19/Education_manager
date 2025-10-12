@@ -46,7 +46,7 @@ class UserModel(Base):
     full_name = Column(String(200))
     password = Column(String)
     email = Column(String(200), unique=True, index=True)
-    national_id = Column(Integer,nullable=False)
+    national_id = Column(String(10),nullable=False)
     gender = Column(Enum(GenderEnum), nullable=False, default=GenderEnum.male)
     created_at = Column(DateTime, default=datetime.now)
     updated_date = Column(DateTime(),default=datetime.now,onupdate=datetime.now) 
