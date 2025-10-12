@@ -53,6 +53,7 @@ psycopg2-binary==2.9.11
 asyncpg==0.30.0
 fastapi-limiter==0.1.6
 redis==7.0.0b3
+slowapi==1.17.3
 argon2-cffi
 flake8
 black
