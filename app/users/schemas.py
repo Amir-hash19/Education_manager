@@ -47,3 +47,9 @@ class UserLoginSchema(BaseModel):
 class UserUpdateSchema(UserBaseSchema):
     password: str 
     updated_date : datetime
+
+
+
+class UserRoleResponse(BaseModel):
+    updated_date : datetime
+    role: str
