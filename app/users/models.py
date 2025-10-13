@@ -60,7 +60,7 @@ class UserModel(Base):
     )
     
 
-
+    @classmethod
     def hash_password(self, plain_password: str) -> str:
         return pwd_context.hash(plain_password)
     

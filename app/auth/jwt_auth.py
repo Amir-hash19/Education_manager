@@ -2,8 +2,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Depends
 from jwt import InvalidSignatureError, DecodeError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
+from sqlalchemy.future import select
 from app.config import settings
 import jwt
 
@@ -80,9 +81,9 @@ def decode_refresh_token(token):
 
 
 
-def get_authenticated_user(
+async def get_authenticated_user(
         credentials: HTTPAuthorizationCredentials = Depends(security),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
     ):
     token = credentials.credentials
     try:
@@ -97,7 +98,11 @@ def get_authenticated_user(
         if not user_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing user_id in token")
 
-        user_obj = db.query(UserModel).filter_by(id=user_id).one()
+        result = await db.execute(select(UserModel).filter_by(id=user_id))
+        user_obj = result.scalar_one_or_none()
+        if not user_obj:
+            raise HTTPException(status_code=401, detail="User not found")
+
         return user_obj
 
     except (InvalidSignatureError, DecodeError):

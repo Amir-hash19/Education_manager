@@ -1,5 +1,5 @@
 from app.auth.jwt_auth import(generate_access_token,
-generate_refresh_token, get_authenticated_user)
+generate_refresh_token, get_authenticated_user, decode_refresh_token)
 
 from fastapi import status, HTTPException, Path, Request,Depends, APIRouter
 from fastapi.responses import JSONResponse, Response
@@ -8,18 +8,18 @@ from sqlalchemy.future import select
 from app.users.models import UserModel, RoleModel
 
 from app.db.database import get_db
-from .schemas import UserBaseSchema, UserCreateSchema
+from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+ 
 
 # from app.main import limiter
-
-userrouter = APIRouter(prefix="/api/v1")
-
+router = APIRouter(prefix="/api/v1")
 
 
-@userrouter.post("/user", response_model=UserBaseSchema)
+
+@router.post("/user", response_model=UserBaseSchema)
 @Limiter(key_func=get_remote_address).limit("5/minute")
 async def create_user(request:Request, user: UserCreateSchema, db:AsyncSession = Depends(get_db)):
     try:
@@ -66,10 +66,123 @@ async def create_user(request:Request, user: UserCreateSchema, db:AsyncSession =
 
                          
                          
+@router.post("/login", status_code=status.HTTP_202_ACCEPTED)
+async def user_login(request: UserLoginSchema,
+    response:Response,
+    db:AsyncSession = Depends(get_db)) -> dict:
 
+    result = await db.execute(select(UserModel).filter_by(email=request.email.lower()))
+    user = result.scalar_one_or_none()
+
+    if not user or not user.verify_password(request.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+
+    
+    access_token = generate_access_token({"sub": str(user.id)}) 
+    refresh_token = generate_refresh_token({"sub": str(user.id)}) 
     
 
 
+    return JSONResponse(
+        content={
+            "detail": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+    )
+
     
 
     
+
+@router.post("/refresh", status_code=status.HTTP_200_OK)
+async def refresh(request: Request, response: Response, db:AsyncSession = Depends(get_db)):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+    try:
+        payload = decode_refresh_token(refresh_token) 
+        user_id = payload.get("sub")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )    
+    user = await db.execute(select(UserModel).filter(UserModel.id == int(user_id)))
+    user = user.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    new_access = generate_access_token({"sub": str(user.id)})
+    
+
+    return {
+        "detail":"Tokens refreshed successfully",
+        "access_token":new_access,
+        "token_type": "bearer"
+    }
+
+
+
+
+@router.get("/user/me", response_model=UserBaseSchema)
+async def user_retrieve(current_user: UserModel = Depends(get_authenticated_user)):
+    return current_user
+
+
+
+
+
+@router.put("/user/me", response_model=UserBaseSchema)
+async def update_current_user(
+    request: UserUpdateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_authenticated_user)
+):
+    try:
+        update_data = request.model_dump(exclude_unset=True)
+
+        if "password" in update_data:
+            update_data["password"] = UserModel.hash_password(update_data["password"])
+
+        for key, value in update_data.items():
+            setattr(current_user, key, value)
+
+        db.add(current_user)
+        await db.commit()
+        await db.refresh(current_user)
+
+        return current_user
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating user: {str(e)}"
+        )    
+                    
+
+
+
+
+@router.delete("/user/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_current_user(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_authenticated_user)
+):
+
+    try:
+        await db.delete(current_user)
+        await db.commit()
+        return {
+            "detail":"Your account deleted successfully",
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting user: {str(e)}"
+        )
