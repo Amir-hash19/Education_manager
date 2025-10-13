@@ -10,10 +10,9 @@ from app.users.models import UserModel, RoleModel
 from app.db.database import get_db
 from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse
 
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from app.users.permisions import get_current_admin 
+from fastapi_cache.decorator import cache
 
 # from app.main import limiter
 router = APIRouter(prefix="/api/v1")
@@ -21,7 +20,6 @@ router = APIRouter(prefix="/api/v1")
 
 
 @router.post("/user", response_model=UserBaseSchema)
-@Limiter(key_func=get_remote_address).limit("5/minute")
 async def create_user(request:Request, user: UserCreateSchema, db:AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(select(UserModel).filter_by(email=user.email.lower()))
@@ -131,6 +129,7 @@ async def refresh(request: Request, response: Response, db:AsyncSession = Depend
 
 
 @router.get("/user/me", response_model=UserBaseSchema)
+@cache(expire=300)
 async def user_retrieve(current_user: UserModel = Depends(get_authenticated_user)):
     return current_user
 
