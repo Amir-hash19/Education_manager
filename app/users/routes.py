@@ -8,11 +8,12 @@ from sqlalchemy.future import select
 from app.users.models import UserModel, RoleModel
 
 from app.db.database import get_db
-from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema
+from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
- 
+
+from app.users.permisions import get_current_admin 
 
 # from app.main import limiter
 router = APIRouter(prefix="/api/v1")
@@ -185,4 +186,37 @@ async def delete_current_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting user: {str(e)}"
+        )
+    
+
+
+
+@router.put("/admin/users/{user_id}/role", response_model=UserRoleResponse)
+async def update_user_role(
+    user_id: int,
+    request: UserRoleResponse,
+    db: AsyncSession = Depends(get_db),
+    admin_user: UserModel = Depends(get_current_admin)
+):
+    try:
+        result = await db.execute(select(UserModel).filter_by(id=user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        user.role = request.role
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+        return user
+    
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating role: {str(e)}"
         )
