@@ -4,11 +4,12 @@ generate_refresh_token, get_authenticated_user, decode_refresh_token)
 from fastapi import status, HTTPException, Path, Request,Depends, APIRouter
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.future import select
 from app.users.models import UserModel, RoleModel
 
 from app.db.database import get_db
-from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse
+from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse, UserRetrieveSchema
 
 
 from app.users.permisions import get_current_admin 
@@ -20,45 +21,65 @@ router = APIRouter(prefix="/api/v1")
 
 
 @router.post("/user", response_model=UserBaseSchema)
-async def create_user(request:Request, user: UserCreateSchema, db:AsyncSession = Depends(get_db)):
+async def create_user(request: Request, user: UserCreateSchema, db: AsyncSession = Depends(get_db)):
     try:
+        # بررسی وجود کاربر
         result = await db.execute(select(UserModel).filter_by(email=user.email.lower()))
         existing_user = result.scalar_one_or_none()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user with this email already exists"
+                detail="User with this email already exists"
             )
         
+        # ایجاد کاربر جدید
         user_obj = UserModel(
-        email=user.email.lower(),
-        full_name=user.full_name,
-        national_id=user.national_id,
-        gender=user.gender
+            email=user.email.lower(),
+            full_name=user.full_name,
+            national_id=user.national_id,
+            gender=user.gender
         )
-
         user_obj.set_password(user.password)
         db.add(user_obj)
-
         await db.commit()
         await db.refresh(user_obj)
 
+        # تولید توکن‌ها
         access_token = generate_access_token(user_obj.id)
         refresh_token = generate_refresh_token(user_obj.id)
 
         return JSONResponse(
             content={
-                "detail": "user created successfully",
-                "access": access_token,
-                "refresh": refresh_token
+                "detail": "User created successfully",
+                "access": str(access_token),
+                "refresh": str(refresh_token)
             },
             status_code=status.HTTP_201_CREATED
         )
-    except Exception as e:
+
+    # خطاهای مربوط به دیتابیس (مثل اتصال یا constraint)
+    except IntegrityError as ie:
         await db.rollback()
+        print("IntegrityError:", str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Database integrity error: " + str(ie.orig)
+        )
+    except SQLAlchemyError as se:
+        await db.rollback()
+        print("SQLAlchemyError:", str(se))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred: {str(e)}"
+            detail="Database error: " + str(se)
+        )
+
+    # خطاهای عمومی دیگر
+    except Exception as e:
+        await db.rollback()
+        print("OtherError:", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
         )
 
 
@@ -80,16 +101,16 @@ async def user_login(request: UserLoginSchema,
         )
 
     
-    access_token = generate_access_token({"sub": str(user.id)}) 
-    refresh_token = generate_refresh_token({"sub": str(user.id)}) 
+    access_token = generate_access_token(user.id) 
+    refresh_token = generate_refresh_token(user.id) 
     
 
 
     return JSONResponse(
         content={
             "detail": "Login successful",
-            "access_token": access_token,
-            "refresh_token": refresh_token,
+            "access_token": str(access_token),
+            "refresh_token": str(refresh_token),
             "token_type": "bearer"
         }
     )
@@ -128,7 +149,7 @@ async def refresh(request: Request, response: Response, db:AsyncSession = Depend
 
 
 
-@router.get("/user/me", response_model=UserBaseSchema)
+@router.get("/user/me", response_model=UserRetrieveSchema)
 @cache(expire=300)
 async def user_retrieve(current_user: UserModel = Depends(get_authenticated_user)):
     return current_user
