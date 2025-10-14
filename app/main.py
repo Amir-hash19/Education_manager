@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.users.routes import router as userrouter
+from app.bootcamp.routes import router as bootcamprouter
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
@@ -44,3 +45,4 @@ app = FastAPI(
 # Routers
 # ---------------------------
 app.include_router(userrouter, tags=["users"])
+app.include_router(bootcamprouter, tags=["bootcamp"])
