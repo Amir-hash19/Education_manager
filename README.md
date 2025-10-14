@@ -52,7 +52,7 @@ You can run this FastAPI project easily using **Docker Compose**.
 Simply run:
 ```bash
 how to run:
-    docker-com:ose up --build
+    docker-compose up --build
 
 how to stop:
     docker-compose down
