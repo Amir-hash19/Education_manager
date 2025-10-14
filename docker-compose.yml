@@ -1,18 +1,16 @@
+version: "3.9"
+
 services:
-
-
   db:
     image: postgres:15
     container_name: postgres_db
     restart: always
+    ports:
+      - "5432:5432"
     environment:
-      JWT_SECRET_KEY: knLRUQMiyDy7S3gsYPqoWDoWw0OM5aGE2CERTMKGT24
-
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: amir112233
       POSTGRES_DB: edumanager
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -20,21 +18,36 @@ services:
     image: redis:7
     container_name: backend_redis
     restart: always
-    ports: 
+    ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+
+  locust:
+    image: locustio/locust
+    container_name: locust
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./app/locust:/mnt/locust
+    command: -f /mnt/locust/locustfile.py
 
   web:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: backend_fastapi
+    restart: always
     environment:
       REDIS_URL: redis://redis:6379
-       
-    ports:
-      - "8000:8000"
+      JWT_SECRET_KEY: knLRUQMiyDy7S3gsYPqoWDoWw0OM5aGE2CERTMKGT24
+      # توصیه می‌شود SQLALCHEMY_DATABASE_URL را اینجا هم قرار دهید
+      SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://admin:amir112233@db:5432/edumanager
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: amir112233
+      DB_NAME: edumanager
     env_file:
       - .env
     depends_on:
@@ -42,10 +55,10 @@ services:
       - redis
     volumes:
       - .:/usr/src/core
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload               
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:
   redis_data:
-
-

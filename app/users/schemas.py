@@ -53,3 +53,11 @@ class UserUpdateSchema(UserBaseSchema):
 class UserRoleResponse(BaseModel):
     updated_date : datetime
     role: str
+
+
+
+class UserRetrieveSchema(BaseModel):
+    full_name: str 
+    national_id: str 
+    email: EmailStr
+    gender: GenderEnum
