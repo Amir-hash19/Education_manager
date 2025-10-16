@@ -23,15 +23,6 @@ services:
     volumes:
       - redis_data:/data
 
-  locust:
-    image: locustio/locust
-    container_name: locust
-    ports:
-      - "8089:8089"
-    volumes:
-      - ./app/locust:/mnt/locust
-    command: -f /mnt/locust/locustfile.py
-
   celery_worker:
     build:
       context: .
