@@ -42,6 +42,13 @@ is isolated, easy to maintain, and ready to scale.
 
 
 
+<p align="center">
+  <img src="docs/diagram.png" alt="diagram pic" width="30%" />
+  <img src="docs/flower.png" alt="flower pic" width="30%" />
+  <img src="docs/swagger.png" alt="swagger pic" width="30%" />
+</p>
+
+
 
 ## 🐳 How to Run with Docker Compose (FastAPI)
 You can run this FastAPI project easily using **Docker Compose**.
