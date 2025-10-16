@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
     DB_NAME: str
+    CELERY_BROKER_URL: str = "redis://redis:6379/3"
+    CELERY_BACKEND_URL: str = "redis://redis:6379/3"
 
 
 

@@ -32,6 +32,31 @@ services:
       - ./app/locust:/mnt/locust
     command: -f /mnt/locust/locustfile.py
 
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    restart: always
+    environment:
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET_KEY: knLRUQMiyDy7S3gsYPqoWDoWw0OM5aGE2CERTMKGT24
+     
+      SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://admin:amir112233@db:5432/edumanager
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: amir112233
+      DB_NAME: edumanager
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/usr/src/core
+    command: bash -c 'celery -A app.celery_conf worker --loglevel=info'
+
   web:
     build:
       context: .
@@ -58,6 +83,17 @@ services:
     ports:
       - "8000:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  flower:
+    image: mher/flower:0.9.7
+    command: ["flower", "--broker=redis//:redis:6379/3", "--port=5555"]
+    ports: 
+      - 5555:5555
+
+    depends_on: 
+      - redis     
+
+
 
 volumes:
   postgres_data:

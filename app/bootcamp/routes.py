@@ -254,3 +254,15 @@ async def list_bootcamps(
     bootcamps = result.scalars().all()
 
     return {"count": len(bootcamps), "data": bootcamps}
+
+
+
+
+
+from app.celery_conf import add_number
+
+
+@router.get("/initiate-celery-task", status_code=200)
+async def start_celery_task():
+    add_number.delay(1,2)
+    return JSONResponse(content={"task":"Done"})
