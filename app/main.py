@@ -6,27 +6,27 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
 from app.config import settings
+from app.users.routes import create_bootstrap_admin
+from app.db.database import AsyncSessionLocal
 
-# ---------------------------
-# Lifespan context
-# ---------------------------
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 🔹 راه‌اندازی Redis Cache
-    redis_client = aioredis.from_url(settings.REDIS_URL)
+    redis_client = await aioredis.from_url(settings.REDIS_URL, encoding="utf8", decode_responses=True)
     cache_backend = RedisBackend(redis_client)
     FastAPICache.init(cache_backend, prefix="fastapi-cache")
     
-
-
-    yield 
-
- 
+    
+    async with AsyncSessionLocal() as db:
+        await create_bootstrap_admin(db)
+    
+    yield
+    
     await redis_client.close()
 
-# ---------------------------
-# FastAPI app
-# ---------------------------
+
+
 app = FastAPI(
     title="Education Manager Project",
     description="Admin panel and bootcamp management",
@@ -41,8 +41,9 @@ app = FastAPI(
     openapi_tags=[{"name": "Udemy clone", "description": "managing CRUD operations"}],
 )
 
-# ---------------------------
-# Routers
-# ---------------------------
+
+
+
+
 app.include_router(userrouter, tags=["users"])
 app.include_router(bootcamprouter, tags=["bootcamp"])

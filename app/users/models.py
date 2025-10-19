@@ -10,14 +10,6 @@ pwd_context = CryptContext(schemes=["argon2"],deprecated="auto")
 
 
 
-class RoleEnum(PyEnum):
-    admin = "admin"
-    instructor = "instructor"
-    student = "student"
-
-
-
-
 
 class GenderEnum(PyEnum):
     male = "male"
@@ -33,7 +25,7 @@ class UserModel(Base):
     full_name = Column(String(200))
     password = Column(String)
     email = Column(String(200), unique=True, index=True)
-    role = Column(Enum(RoleEnum, name="roleenum"), nullable=False, default=RoleEnum.student)
+    role = Column(String(20), nullable=False, default="student")
     national_id = Column(String(10),nullable=False)
     gender = Column(Enum(GenderEnum), nullable=False, default=GenderEnum.male)
     created_at = Column(DateTime, default=datetime.now)

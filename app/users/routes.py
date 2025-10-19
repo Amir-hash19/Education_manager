@@ -9,7 +9,9 @@ from sqlalchemy.future import select
 from app.users.models import UserModel
 
 from app.db.database import get_db
-from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse, UserRetrieveSchema, AdminCreateSchema
+from .schemas import( UserBaseSchema, UserCreateSchema, AdminUpdateRoleSchema,UserLoginSchema,
+UserUpdateSchema, UserRoleResponse, UserRetrieveSchema,
+AdminCreateSchema)
 
 
 from app.users.permisions import get_current_admin 
@@ -211,105 +213,39 @@ async def delete_current_user(
     
 
 
+from app.config import settings
+async def create_bootstrap_admin(db: AsyncSession):
 
-@router.put("/admin/users/{user_id}/role", response_model=UserRoleResponse)
-async def update_user_role(
-    user_id: int,
-    request: UserRoleResponse,
-    db: AsyncSession = Depends(get_db),
-    admin_user: UserModel = Depends(get_current_admin)
-):
-    try:
-        result = await db.execute(select(UserModel).filter_by(id=user_id))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        user.role = request.role
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+    admin_email = settings.ADMIN_EMAIL
+    admin_password = settings.ADMIN_PASSWORD
 
-        return user
-    
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error updating role: {str(e)}"
-        )
+    if not admin_email or not admin_password:
+        print("⚠️ Bootstrap admin credentials missing in .env file.")
+        return
 
+  
+    result = await db.execute(
+        select(UserModel).where(UserModel.email == admin_email)
+    )
+    existing_admin = result.scalar_one_or_none()
 
+    if existing_admin:
+        print(f"✅ Admin already exists: {existing_admin.email}")
+        return
 
+    # اگر نبود، بسازش
+    from datetime import datetime
+    new_admin = UserModel(
+        full_name="Bootstrap Admin",
+        email=admin_email,
+        password=UserModel.hash_password(admin_password),
+        national_id="0000000000",   
+        gender="male",
+        role="admin",
+        created_at=datetime.now(),
+    )
 
-
-@router.post("/admin", response_model=AdminCreateSchema)
-async def create_user(request: Request, user: AdminCreateSchema, owner_id: int, db: AsyncSession = Depends(get_db)):
-    try:
-        # بررسی وجود کاربر
-        result = await db.execute(select(UserModel).filter_by(email=user.email.lower()))
-        existing_user = result.scalar_one_or_none()
-
-        if existing_user:
-            # بررسی roles یا گروه‌های کاربر
-            if set(user.roles).intersection(set(existing_user.roles)):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="User already exists in one of the specified roles/groups"
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="User with this email already exists"
-                )
-        
-       
-        user_obj = UserModel(
-            email=user.email.lower(),
-            full_name=user.full_name,
-            national_id=user.national_id,
-            gender=user.gender,
-            roles=user.roles,
-            owner_id=owner_id 
-        )
-        user_obj.set_password(user.password)
-        db.add(user_obj)
-        await db.commit()
-        await db.refresh(user_obj)
-
-        # تولید توکن‌ها
-        access_token = generate_access_token(user_obj.id)
-        refresh_token = generate_refresh_token(user_obj.id)
-
-        return JSONResponse(
-            content={
-                "detail": "User created successfully",
-                "access": str(access_token),
-                "refresh": str(refresh_token)
-            },
-            status_code=status.HTTP_201_CREATED
-        )
-    except IntegrityError as ie:
-        await db.rollback()
-        print("IntegrityError:", str(ie))
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Database integrity error: " + str(ie.orig)
-        )
-    except SQLAlchemyError as se:
-        await db.rollback()
-        print("SQLAlchemyError:", str(se))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error: " + str(se)
-        )
-    except Exception as e:
-        await db.rollback()
-        print("OtherError:", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred"
-        )
+    db.add(new_admin)
+    await db.commit()
+    await db.refresh(new_admin)
+    print(f"✅ Bootstrap admin created: {new_admin.email}")
