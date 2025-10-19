@@ -6,14 +6,15 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.future import select
-from app.users.models import UserModel, RoleModel
+from app.users.models import UserModel
 
 from app.db.database import get_db
-from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse, UserRetrieveSchema
+from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse, UserRetrieveSchema, AdminCreateSchema
 
 
 from app.users.permisions import get_current_admin 
 from fastapi_cache.decorator import cache
+
 
 # from app.main import limiter
 router = APIRouter(prefix="/api/v1")
@@ -239,4 +240,76 @@ async def update_user_role(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error updating role: {str(e)}"
+        )
+
+
+
+
+
+@router.post("/admin", response_model=AdminCreateSchema)
+async def create_user(request: Request, user: AdminCreateSchema, owner_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        # بررسی وجود کاربر
+        result = await db.execute(select(UserModel).filter_by(email=user.email.lower()))
+        existing_user = result.scalar_one_or_none()
+
+        if existing_user:
+            # بررسی roles یا گروه‌های کاربر
+            if set(user.roles).intersection(set(existing_user.roles)):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User already exists in one of the specified roles/groups"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User with this email already exists"
+                )
+        
+       
+        user_obj = UserModel(
+            email=user.email.lower(),
+            full_name=user.full_name,
+            national_id=user.national_id,
+            gender=user.gender,
+            roles=user.roles,
+            owner_id=owner_id 
+        )
+        user_obj.set_password(user.password)
+        db.add(user_obj)
+        await db.commit()
+        await db.refresh(user_obj)
+
+        # تولید توکن‌ها
+        access_token = generate_access_token(user_obj.id)
+        refresh_token = generate_refresh_token(user_obj.id)
+
+        return JSONResponse(
+            content={
+                "detail": "User created successfully",
+                "access": str(access_token),
+                "refresh": str(refresh_token)
+            },
+            status_code=status.HTTP_201_CREATED
+        )
+    except IntegrityError as ie:
+        await db.rollback()
+        print("IntegrityError:", str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Database integrity error: " + str(ie.orig)
+        )
+    except SQLAlchemyError as se:
+        await db.rollback()
+        print("SQLAlchemyError:", str(se))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error: " + str(se)
+        )
+    except Exception as e:
+        await db.rollback()
+        print("OtherError:", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
         )

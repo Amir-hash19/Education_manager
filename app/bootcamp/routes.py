@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/v1")
 async def create_bootcamp_category(request: Request, 
     bootcamp_category: BootcampCategorySchema,
     db: AsyncSession = Depends(get_db),
-    admin_user:  UserModel=Depends(get_current_admin)):
+   ):
     try:
         bootcamp_category_obj = BootCampCategoryModel(
             name=bootcamp_category.name,
@@ -42,7 +42,6 @@ async def create_bootcamp_category(request: Request,
 
     except IntegrityError as ie:
         await db.rollback()
-        print("IntegrityError:", str(ie))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Database integrity error: " + str(ie.orig)

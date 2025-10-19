@@ -35,6 +35,8 @@ class UserCreateSchema(UserBaseSchema):
         return password_confirm
 
 
+class AdminCreateSchema(UserCreateSchema):
+    roles: str = Field(...,)
 
 
 
