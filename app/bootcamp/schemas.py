@@ -62,9 +62,6 @@ class BootCampResponseSchema(BaseModel):
     category: Optional[BootcampCategorySchema] = None  # ✅ اینجا عالیه
     instructors: Optional[List[str]] = None
 
-    class Config:
-        from_attributes = True
-
 
 
 class BootCampDeleteResponse(BaseModel):
@@ -83,6 +80,6 @@ class BootcampUpdateSchema(BaseModel):
     is_online: bool
     start_date: datetime
     end_date: datetime
-    category: Optional[BootcampCategorySchema] = None  # ✅ اینجا عالیه
+    category: Optional[str]  
     instructors: Optional[List[str]] = None
 

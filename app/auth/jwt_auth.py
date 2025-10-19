@@ -9,7 +9,7 @@ from app.config import settings
 import jwt
 
 #import user model for verify 
-from app.users.models import UserModel, RoleModel
+from app.users.models import UserModel
 
 security = HTTPBearer()
 

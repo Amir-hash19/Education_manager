@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://redis:6379/3"
     CELERY_BACKEND_URL: str = "redis://redis:6379/3"
 
+     # Bootstrap Admin
+    ADMIN_EMAIL: str | None = None
+    ADMIN_PASSWORD: str | None = None
+
 
 
     model_config = SettingsConfigDict(env_file=".env")
