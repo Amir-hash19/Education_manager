@@ -63,6 +63,10 @@ class BootCampModel(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_date = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    bootcamp_in_roll = relationship("BootCampInRollModel", back_populates="bootcamp",
+    uselist=False,cascade="all, delete-orphan",
+    passive_deletes=True)
+
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
 
     category = relationship("BootCampCategoryModel", back_populates="bootcamp_list")
@@ -71,6 +75,28 @@ class BootCampModel(Base):
         return f"bootcamp  ID {self.id} and created_at{self.created_at}"
 
 
+
+class BootCampInRollStatus(PyEnum):
+    draft = "draft"
+    accept = "accept"
+    denide = "denide"
+    
+
+
+
+class BootCampInRollModel(Base):
+    __tablename__ = "bootcampsinroll"
+
+    subject = Column(Text, nullable=True)
+    id = Column(Integer, primary_key=True, index=True)
+    status = Column(Enum(BootCampInRollStatus), nullable=False, default=BootCampInRollStatus.draft)
+    bootcamp_id = Column(Integer, ForeignKey("bootcamps.id",ondelete="CASCADE"), unique=True)
+    bootcamp = relationship("BootCampModel", back_populates="bootcamp_in_roll")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_date = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"bootcampInRoll  ID {self.id} and created_at{self.created_at}"
 
 
 
