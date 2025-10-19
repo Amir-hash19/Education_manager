@@ -6,14 +6,17 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.future import select
-from app.users.models import UserModel, RoleModel
+from app.users.models import UserModel
 
 from app.db.database import get_db
-from .schemas import UserBaseSchema, UserCreateSchema, UserLoginSchema, UserUpdateSchema, UserRoleResponse, UserRetrieveSchema
+from .schemas import( UserBaseSchema, UserCreateSchema, AdminUpdateRoleSchema,UserLoginSchema,
+UserUpdateSchema, UserRoleResponse, UserRetrieveSchema,
+AdminCreateSchema)
 
 
 from app.users.permisions import get_current_admin 
 from fastapi_cache.decorator import cache
+
 
 # from app.main import limiter
 router = APIRouter(prefix="/api/v1")
@@ -210,33 +213,39 @@ async def delete_current_user(
     
 
 
+from app.config import settings
+async def create_bootstrap_admin(db: AsyncSession):
 
-@router.put("/admin/users/{user_id}/role", response_model=UserRoleResponse)
-async def update_user_role(
-    user_id: int,
-    request: UserRoleResponse,
-    db: AsyncSession = Depends(get_db),
-    admin_user: UserModel = Depends(get_current_admin)
-):
-    try:
-        result = await db.execute(select(UserModel).filter_by(id=user_id))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        user.role = request.role
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+    admin_email = settings.ADMIN_EMAIL
+    admin_password = settings.ADMIN_PASSWORD
 
-        return user
-    
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error updating role: {str(e)}"
-        )
+    if not admin_email or not admin_password:
+        print("⚠️ Bootstrap admin credentials missing in .env file.")
+        return
+
+  
+    result = await db.execute(
+        select(UserModel).where(UserModel.email == admin_email)
+    )
+    existing_admin = result.scalar_one_or_none()
+
+    if existing_admin:
+        print(f"✅ Admin already exists: {existing_admin.email}")
+        return
+
+    # اگر نبود، بسازش
+    from datetime import datetime
+    new_admin = UserModel(
+        full_name="Bootstrap Admin",
+        email=admin_email,
+        password=UserModel.hash_password(admin_password),
+        national_id="0000000000",   
+        gender="male",
+        role="admin",
+        created_at=datetime.now(),
+    )
+
+    db.add(new_admin)
+    await db.commit()
+    await db.refresh(new_admin)
+    print(f"✅ Bootstrap admin created: {new_admin.email}")

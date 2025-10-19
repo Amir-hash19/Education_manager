@@ -22,6 +22,24 @@ class UserBaseSchema(BaseModel):
 
 
 
+class AdminUpdateRoleSchema(UserBaseSchema):
+    password: str = Field(...,max_length=70, min_length=8)
+    password_confirm: str = Field(...,max_length=70,min_length=8,
+    description="password confirmation")
+    
+    @field_validator("password_confirm")
+    def check_passwords_match(cls, password_confirm, validation):
+        if not (password_confirm == validation.data.get("password")):
+            raise ValueError("passwords invalid")
+        return password_confirm
+    
+    
+    owner_id: Optional[int] = None 
+
+
+
+
+
 
 class UserCreateSchema(UserBaseSchema):
     password: str = Field(...,max_length=70, min_length=8)
@@ -35,6 +53,8 @@ class UserCreateSchema(UserBaseSchema):
         return password_confirm
 
 
+class AdminCreateSchema(UserCreateSchema):
+    roles: str = Field(...,)
 
 
 

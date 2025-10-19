@@ -1,34 +1,13 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Table, DateTime, Enum
+from app.bootcamp.models import BootCampModel, bootcamp_instructors
 from passlib.context import CryptContext
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 from enum import Enum as PyEnum
 from datetime import datetime
-from app.bootcamp.models import BootCampModel, bootcamp_instructors
 
 pwd_context = CryptContext(schemes=["argon2"],deprecated="auto")
 
-
-
-user_roles = Table(
-    "user_roles",
-    Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id")),
-    Column("role_id", Integer, ForeignKey("roles.id")),
-)
-
-
-class RoleModel(Base):
-    __tablename__ = "roles"
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True)
-    description = Column(String(200))
-
-    users = relationship("UserModel", secondary=user_roles, back_populates="roles")
-
-    def __repr__(self):
-        return f"Role name is {self.name}, with ID {self.id}"
 
 
 
@@ -46,12 +25,13 @@ class UserModel(Base):
     full_name = Column(String(200))
     password = Column(String)
     email = Column(String(200), unique=True, index=True)
+    role = Column(String(20), nullable=False, default="student")
     national_id = Column(String(10),nullable=False)
     gender = Column(Enum(GenderEnum), nullable=False, default=GenderEnum.male)
     created_at = Column(DateTime, default=datetime.now)
     updated_date = Column(DateTime(),default=datetime.now,onupdate=datetime.now) 
 
-    roles = relationship("RoleModel", secondary=user_roles, back_populates="users")
+
 
     bootcamp = relationship(
         "BootCampModel",

@@ -46,9 +46,7 @@ class TicketMessageModel(Base):
     message_status = Column(Enum(MessageStatusEnum), default=MessageStatusEnum.pending)
     message = Column(Text, nullable=True)
     date_created = Column(DateTime(timezone=True), server_default=func.now())
-    attachment = Column(String(255), nullable=True)
-    slug = Column(String(255), unique=True, nullable=False)
-    title = Column(String(50), nullable=True)
+
 
     admin_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     admin_response = Column(Text, nullable=True)

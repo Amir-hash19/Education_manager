@@ -7,7 +7,7 @@ from sqlalchemy import pool
 from alembic import context
 
 import asyncio
-from app.db.seed_roles import seed_roles
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -20,7 +20,7 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from app.users.models import RoleModel, UserModel
+from app.users.models import UserModel
 from app.support.models import TicketModel, TicketMessageModel
 from app.bootcamp.models import BootCampCategoryModel, BootCampModel
 from app.blog.models import BlogModel
@@ -67,7 +67,7 @@ async def run_migrations_online() -> None:
         await connection.run_sync(do_run_migrations)
 
 
-    await seed_roles()    
+
 
 
 if context.is_offline_mode():
