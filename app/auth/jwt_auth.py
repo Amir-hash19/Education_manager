@@ -16,7 +16,7 @@ security = HTTPBearer()
 
 
 
-def generate_access_token(user_id: int, expires_in: int = 60*5) -> str:
+def generate_access_token(user_id: int, expires_in: int = 60*10) -> str:
 
     """this function will create an access token base on user information"""
 
