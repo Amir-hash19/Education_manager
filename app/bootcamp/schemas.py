@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, constr
 from typing import List, Optional, Literal
 from decimal import Decimal
 from datetime import datetime
+from datetime import date
 from enum import Enum
 
 
@@ -59,7 +60,7 @@ class BootCampResponseSchema(BaseModel):
     end_date: datetime
     created_at: datetime
     updated_date: datetime
-    category: Optional[BootcampCategorySchema] = None  # ✅ اینجا عالیه
+    category: Optional[BootcampCategorySchema] = None  
     instructors: Optional[List[str]] = None
 
 
@@ -71,15 +72,17 @@ class BootCampDeleteResponse(BaseModel):
 
 
 
-class BootcampUpdateSchema(BaseModel):
-    title: str
-    description: str
-    price: Decimal
-    capacity: int
-    status: BootCampStatus
-    is_online: bool
-    start_date: datetime
-    end_date: datetime
-    category: Optional[str]  
-    instructors: Optional[List[str]] = None
+class BootCampUpdateSchema(BaseModel):
+    title: Optional[str]
+    price: Optional[Decimal]
+    is_online: Optional[bool]
+    capacity: Optional[int]
+    description: Optional[str]
+    start_date: Optional[date]
+    end_date: Optional[date]
+    status: Optional[BootCampStatus]
+    category_id: Optional[int]
+
+    class Config:
+        orm_mode = True
 
