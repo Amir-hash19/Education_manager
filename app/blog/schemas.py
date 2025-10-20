@@ -28,3 +28,25 @@ class BlogResponseSchema(BlogBaseSchema):
 
 
 
+class BlogDeleteResponse(BaseModel):
+    status_code: int
+    message: str
+
+
+
+
+class BlogUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    status: Optional[BlogStatusEnum] = None  
+
+    model_config = {"from_attributes": True}
+
+
+
+class BlogUpdateResponse(BaseModel):
+    message: str
+    status_code: int
+    data: BlogUpdateRequest
+
+    
