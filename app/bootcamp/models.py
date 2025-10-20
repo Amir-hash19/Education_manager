@@ -43,7 +43,7 @@ class BootCampModel(Base):
     __tablename__ = "bootcamps"
 
     id = Column(Integer, primary_key=True, index=True)
-    status = Column(Enum(BootCampStatus), nullable=False, default=BootCampStatus.draft)
+    status = Column(Enum(BootCampStatus, native_enum=False), nullable=False, default=BootCampStatus.draft.value)
 
 
     instructors = relationship(

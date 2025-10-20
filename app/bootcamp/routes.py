@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.future import select
 from sqlalchemy import and_
 from sqlalchemy.orm import selectinload
-from app.bootcamp.models import BootCampCategoryModel, BootCampModel
+from app.bootcamp.models import BootCampCategoryModel, BootCampModel, BootCampStatus
 from app.db.database import get_db
 from app.users.permisions import get_current_admin 
 from fastapi_cache.decorator import cache
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.bootcamp.schemas import(BootCampResponseSchema, BootcampSchema,
-BootCampDeleteResponse, BootcampUpdateSchema)
+BootCampDeleteResponse, BootCampUpdateSchema)
 
 router = APIRouter(prefix="/api/v1")
 
@@ -82,99 +82,82 @@ async def delete_bootcamp_category(
 
 
 
-@router.post("/bootcamp", response_model=BootCampResponseSchema)
+
+@router.post("/bootcamps/create", response_model=BootCampResponseSchema)
 async def create_bootcamp(
-    data: BootcampSchema,
-    db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_admin)
+    bootcamp: BootcampSchema,
+    db: AsyncSession = Depends(get_db)
 ):
-    try:
-        existing = await db.execute(select(BootCampModel).where(BootCampModel.title == data.title))
-        if existing.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Bootcamp with title '{data.title}' already exists."
-            )
-
-    
-        category_obj = None
-        if data.category:
-            result = await db.execute(
-                select(BootCampCategoryModel).where(BootCampCategoryModel.name == data.category)
-            )
-            category_obj = result.scalar_one_or_none()
-            if not category_obj:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Category '{data.category}' not found"
-                )
-
-    
-        bootcamp = BootCampModel(
-            title=data.title,
-            description=data.description,
-            price=data.price,
-            capacity=data.capacity,
-            is_online=data.is_online,
-            start_date=data.start_date,
-            end_date=data.end_date,
-            category_id=category_obj.id if category_obj else None,
-        )
-
-        # 4️⃣ اضافه کردن instructors
-        if data.instructors:
-            for email in data.instructors:
-                result = await db.execute(
-                    select(UserModel).where(UserModel.email == email)
-                )
-                instructor = result.scalar_one_or_none()
-                if not instructor:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Instructor '{email}' not found."
-                    )
-                bootcamp.instructors.append(instructor)
-
-        # 5️⃣ ذخیره در دیتابیس
-        db.add(bootcamp)
-        await db.commit()
-        await db.refresh(bootcamp)
-
-
+    # ---- Handle category ----
+    category = None
+    if bootcamp.category is not None and str(bootcamp.category).strip():
         result = await db.execute(
-            select(BootCampModel)
-            .options(selectinload(BootCampModel.instructors))
-            .where(BootCampModel.id == bootcamp.id)
+            select(BootCampCategoryModel).filter_by(id=bootcamp.category)
         )
-        bootcamp = result.scalar_one()
+        category = result.scalars().first()
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
 
-        bootcamp_data = BootCampResponseSchema.model_validate({
-            "id": bootcamp.id,
-            "title": bootcamp.title,
-            "description": bootcamp.description,
-            "price": float(bootcamp.price),
-            "capacity": bootcamp.capacity,
-            "status": bootcamp.status,
-            "is_online": bootcamp.is_online,
-            "start_date": bootcamp.start_date,
-            "end_date": bootcamp.end_date,
-            "created_at": bootcamp.created_at,
-            "updated_date": bootcamp.updated_date,
-            "category": BootcampCategorySchema.model_validate({
-                "id": bootcamp.category.id,
-                "name": bootcamp.category.name,
-                "date_created": bootcamp.category.date_created
-            }) if bootcamp.category else None,
-            "instructors": [i.email for i in bootcamp.instructors]
-        })
-    
+    # ---- Handle instructors ----
+    instructors = []
+    valid_instructor_ids = [int(i) for i in bootcamp.instructors if str(i).strip().isdigit()]
+    if valid_instructor_ids:
+        result = await db.execute(
+            select(UserModel).filter(UserModel.id.in_(valid_instructor_ids))
+        )
+        instructors = result.scalars().all()
+        if len(instructors) != len(valid_instructor_ids):
+            raise HTTPException(status_code=404, detail="One or more instructors not found")
 
-    
-        return bootcamp_data
-    
-    except Exception as e:
-        await db.rollback()
-        raise e
+    # ---- Create BootCamp ----
+    new_bootcamp = BootCampModel(
+        title=bootcamp.title,
+        price=float(bootcamp.price),
+        is_online=bootcamp.is_online,
+        capacity=bootcamp.capacity,
+        description=bootcamp.description,
+        start_date=bootcamp.start_date,
+        end_date=bootcamp.end_date,
+        category=category,
+        instructors=instructors,
+        
+    )
+
+    db.add(new_bootcamp)
+    await db.commit()
+    await db.refresh(new_bootcamp)
+
+    # ---- Preload relations to avoid MissingGreenlet ----
+    result = await db.execute(
+        select(BootCampModel)
+        .options(
+            selectinload(BootCampModel.instructors),
+            selectinload(BootCampModel.category)
+        )
+        .where(BootCampModel.id == new_bootcamp.id)
+    )
+    bootcamp_with_relations = result.scalars().first()
+
+    # ---- Prepare response ----
+    return BootCampResponseSchema(
+        id=bootcamp_with_relations.id,
+        title=bootcamp_with_relations.title,
+        description=bootcamp_with_relations.description or "",
+        price=bootcamp_with_relations.price,
+        capacity=bootcamp_with_relations.capacity,
+        status=bootcamp_with_relations.status,
+        is_online=bootcamp_with_relations.is_online,
+        start_date=bootcamp_with_relations.start_date,
+        end_date=bootcamp_with_relations.end_date,
+        created_at=bootcamp_with_relations.created_at,
+        updated_date=bootcamp_with_relations.updated_date,
+        category=BootcampCategorySchema(
+            id=bootcamp_with_relations.category.id,
+            name=bootcamp_with_relations.category.name,
+            date_created=bootcamp_with_relations.category.date_created
+        ) if bootcamp_with_relations.category else None,
+        instructors=[inst.full_name for inst in bootcamp_with_relations.instructors] if bootcamp_with_relations.instructors else []
+    )
 
 
 
@@ -209,55 +192,27 @@ async def delete_bootcamp(bootcamp_id: int, db: AsyncSession = Depends(get_db),
                                
 
 
-@router.put("/bootcamp/{bootcamp_id}/update", status_code=status.HTTP_200_OK)
+@router.put("/bootcamps/{bootcamp_id}/edit", response_model=dict)
 async def update_bootcamp(
-    bootcamp_id: int, 
-    bootcamp_data: BootcampUpdateSchema,
-    db: AsyncSession = Depends(get_db), 
-    current_user = Depends(get_current_admin)
+    bootcamp_id: int = Path(..., title="ID of the bootcamp to update"),
+    bootcamp_data: BootCampUpdateSchema = ...,
+    db: AsyncSession = Depends(get_db)
 ):
+   
+    result = await db.execute(select(BootCampModel).filter(BootCampModel.id == bootcamp_id))
+    bootcamp = result.scalars().first()
     
-    result = await db.execute(select(BootCampModel).where(BootCampModel.id == bootcamp_id))
-    bootcamp = result.scalar_one_or_none()
     if not bootcamp:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="object not found")
-    
-  
-    update_fields = bootcamp_data.model_dump(exclude_unset=True)
+        raise HTTPException(status_code=404, detail="Bootcamp not found")
 
-    # فیلدهای ساده
-    simple_fields = ["title", "description", "price", "capacity", "is_online", "status", "start_date", "end_date"]
-    for key in simple_fields:
-        if key in update_fields:
-            setattr(bootcamp, key, update_fields[key])
 
-        # آپدیت category
-    if "category" in update_fields:
-        cat_name = update_fields["category"]  # حالا str است
-        result = await db.execute(
-            select(BootCampCategoryModel).where(BootCampCategoryModel.name == cat_name)
-        )
-        category_obj = result.scalar_one_or_none()
-        if not category_obj:
-            raise HTTPException(status_code=404, detail=f"Category '{cat_name}' not found")
-        bootcamp.category = category_obj
-    
-        
+    for key, value in bootcamp_data.dict(exclude_unset=True).items():
+        setattr(bootcamp, key, value)
 
-        if "instructors" in update_fields:
-            bootcamp.instructors = []  
-            for email in update_fields["instructors"]:
-                result = await db.execute(select(UserModel).where(UserModel.email == email))
-            instructor = result.scalar_one_or_none()
-            if not instructor:
-                raise HTTPException(status_code=404, detail=f"Instructor '{email}' not found")
-            bootcamp.instructors.append(instructor)
+    db.commit()
+    db.refresh(bootcamp)
 
-    await db.commit()
-    await db.refresh(bootcamp)
-
-    return bootcamp
-
+    return {"message": "Bootcamp updated successfully", "bootcamp_id": bootcamp.id}
 
    
 
@@ -324,14 +279,14 @@ async def retrieve_bootcamp(bootcamp_id: int, db: AsyncSession = Depends(get_db)
 
 
 
-@router.get("/bootcamps", status_code=status.HTTP_200_OK)
+@router.get("/bootcamps/all/list", status_code=status.HTTP_200_OK)
 async def list_bootcamps(
     db: AsyncSession = Depends(get_db),
     
 ):
     """any user have access to this end point to check bootcamps"""
     
-    query = select(BootCampModel).where(BootCampModel.status != "draft")
+    query = select(BootCampModel).where(BootCampModel.status != BootCampStatus.draft)
     result = await db.execute(query)
     bootcamps = result.scalars().all()
 
@@ -340,11 +295,3 @@ async def list_bootcamps(
 
 
 
-
-from app.celery_conf import add_number
-
-
-@router.get("/initiate-celery-task", status_code=200)
-async def start_celery_task():
-    add_number.delay(1,2)
-    return JSONResponse(content={"task":"Done"})
