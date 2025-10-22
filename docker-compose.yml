@@ -27,7 +27,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: celery_worker
+    container_name: worker_celery
     restart: always
     environment:
       REDIS_URL: redis://redis:6379

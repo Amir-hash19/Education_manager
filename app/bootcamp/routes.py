@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/v1")
 async def create_bootcamp_category(request: Request, 
     bootcamp_category: BootcampCategorySchema,
     db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin)
    ):
     try:
         bootcamp_category_obj = BootCampCategoryModel(
