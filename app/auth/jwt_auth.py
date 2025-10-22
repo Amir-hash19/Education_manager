@@ -109,3 +109,30 @@ async def get_authenticated_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
+
+
+
+
+from jwt import PyJWTError
+from app.config import settings
+from typing import Any
+
+def verify_access_token(token: str) -> dict[str, Any]:
+    """
+    بررسی JWT:
+    - معتبر بودن امضا
+    - تاریخ انقضا
+    """
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+        if "user_id" not in payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token payload invalid",
+            )
+        return payload
+    except PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token invalid or expired",
+        )
