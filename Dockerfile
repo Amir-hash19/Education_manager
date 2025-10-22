@@ -10,7 +10,7 @@ COPY ./requirements.txt .
 RUN pip install --upgrade pip setuptools wheel
 
 # اول Redis و cache نصب می‌شوند
-RUN pip install redis==5.0.8 asyncpg==0.30.0 argon2-cffi
+RUN pip install redis==5.0.8 asyncpg==0.30.0 argon2-cffi flake8
 RUN pip install fastapi-cache2[redis]==0.2.2 passlib[bcrypt]==1.7.4 email-validator==2.3.0 celery[redis]
 
 
