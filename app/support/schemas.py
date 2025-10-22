@@ -26,3 +26,27 @@ class TicketBabseSchema(BaseModel):
 
 class TicketResponseSchema(TicketBabseSchema):
     id: int
+
+
+
+
+
+
+class TicketMessageBaseSchema(BaseModel):
+    user_phone: str
+    message_status: MessageStatus = Field(default=MessageStatus.pending)
+    message: str
+    date_created: datetime = Field(default_factory=datetime.now)
+
+
+
+class TicketMessageResponseSchema(TicketBabseSchema):
+    id : int
+
+
+
+
+class TicketMessageUpdateSchema(BaseModel):
+    message_status: Optional[MessageStatus]
+    admin_response: Optional[str]
+    

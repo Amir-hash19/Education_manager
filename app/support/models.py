@@ -55,7 +55,7 @@ class TicketMessageModel(Base):
     admin_response = Column(Text, nullable=True)
 
     def __repr__(self):
-        return f"title <{self.title} and date_created {self.date_created}>"
+        return f"title <{self.title}> and date_created <{self.date_created}>"
 
 
 
