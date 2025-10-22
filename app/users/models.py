@@ -29,7 +29,8 @@ class UserModel(Base):
     national_id = Column(String(10),nullable=False)
     gender = Column(Enum(GenderEnum), nullable=False, default=GenderEnum.male)
     created_at = Column(DateTime, default=datetime.now)
-    updated_date = Column(DateTime(),default=datetime.now,onupdate=datetime.now) 
+    updated_date = Column(DateTime(),default=datetime.now,onupdate=datetime.now)
+    tickets = relationship("TicketModel", back_populates="user") 
 
 
 
