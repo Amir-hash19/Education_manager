@@ -39,7 +39,7 @@ async def create_blog(request:Request, blog: BlogBaseSchema, db: AsyncSession = 
 
 
 
-@router.get("/blogs", status_code=status.HTTP_200_OK)
+@router.get("/admin/blogs", status_code=status.HTTP_200_OK)
 async def list_blog(db: AsyncSession = Depends(get_db), current_admin = Depends(get_current_admin),
 status_filter: Optional[str] = Query(None, description="filter blogs in published status")):
     query = select(BlogModel)
@@ -47,6 +47,21 @@ status_filter: Optional[str] = Query(None, description="filter blogs in publishe
     if status_filter:
         query = query.where(BlogModel.status == status_filter)
 
+
+    result = await db.execute(query)
+    blogs = result.scalars().all()
+
+    return {"count":len(blogs), "data":blogs}    
+
+
+
+
+
+
+@router.get("/blogs", status_code=status.HTTP_200_OK)
+async def list_blog(db: AsyncSession = Depends(get_db),):
+
+    query = select(BlogModel)
 
     result = await db.execute(query)
     blogs = result.scalars().all()
@@ -131,6 +146,7 @@ async def update_blog(blog_id: int, blog:BlogUpdateRequest, db:AsyncSession = De
         "status_code":status.HTTP_200_OK,
         "data":blog_obj
     }    
+
 
 
 

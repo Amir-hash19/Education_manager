@@ -20,7 +20,10 @@ class TicketModel(Base):
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id")) 
 
+    user = relationship("UserModel", back_populates="tickets")
+    
     def __repr__(self):
         return f"title <{self.title} and date_created {self.created_at}>"
 
