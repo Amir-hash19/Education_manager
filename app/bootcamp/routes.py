@@ -7,7 +7,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import selectinload
 from app.bootcamp.models import BootCampCategoryModel, BootCampModel, BootCampStatus
 from app.db.database import get_db
-from app.users.permisions import get_current_admin 
+from app.users.permissions import get_current_admin 
 from fastapi_cache.decorator import cache
 from app.auth.jwt_auth import get_authenticated_user
 from app.bootcamp.schemas import BootcampCategorySchema
@@ -264,7 +264,7 @@ async def list_bootcamps(
 
 @router.get("/bootcamps/{bootcamp_id}", status_code=status.HTTP_200_OK)
 async def retrieve_bootcamp(bootcamp_id: int, db: AsyncSession = Depends(get_db)):
-    """this api is availabe for any user in order to check bootcamps"""
+    """this api is available for any user in order to check bootcamps"""
     result = await db.execute(select(BootCampModel).where(
         and_(BootCampModel.id == bootcamp_id,
             BootCampModel.status != "draft")

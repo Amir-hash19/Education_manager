@@ -3,11 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.users.models import UserModel
 from app.db.database import get_db
-from app.users.permisions import get_current_admin 
+from app.users.permissions import get_current_admin 
 from fastapi_cache.decorator import cache
 from sqlalchemy import and_
 from app.blog.schemas import BlogStatusEnum, BlogBaseSchema, BlogResponseSchema, BlogDeleteResponse, BlogUpdateRequest, BlogUpdateResponse
-from app.users.permisions import get_current_admin
+from app.users.permissions import get_current_admin
 
 from app.blog.models import BlogModel, StatusBlog
 

@@ -14,7 +14,7 @@ UserUpdateSchema, UserRoleResponse, UserRetrieveSchema,
 AdminCreateSchema)
 
 
-from app.users.permisions import get_current_admin 
+from app.users.permissions import get_current_admin 
 from fastapi_cache.decorator import cache
 
 

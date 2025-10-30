@@ -84,6 +84,20 @@ services:
     depends_on: 
       - redis     
 
+  locust:
+    image: locustio/locust:2.29.1
+    container_name: locust_loadtest
+    depends_on:
+      - web
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./locust:/mnt/locust
+    command: >
+      -f /mnt/locust/locustfile.py
+        --host http://web:8000
+
+
 
 
 volumes:
