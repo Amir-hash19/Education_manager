@@ -15,7 +15,7 @@ from app.auth.jwt_auth import get_authenticated_user
 from app.support.models import TicketModel, TicketMessageModel, MessageStatusEnum
 
 from app.support.schemas import TicketBabseSchema, TicketResponseSchema, TicketMessageBaseSchema, TicketMessageResponseSchema, TicketMessageUpdateSchema
-from app.users.permisions import get_current_admin
+from app.users.permissions import get_current_admin
 
 router = APIRouter(prefix="/api/v1")
 
